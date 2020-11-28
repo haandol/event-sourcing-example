@@ -51,6 +51,7 @@ errorTypes.map(type => {
 signalTraps.map(type => {
   process.once(<NodeJS.Signals>type, async () => {
     try {
+      console.log(`process.once ${type}`);
       await producer.disconnect();
     } finally {
       process.kill(process.pid, type);

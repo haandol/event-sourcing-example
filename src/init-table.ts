@@ -5,25 +5,6 @@ const ddb = new AWS.DynamoDB({
   region: 'ap-northeast-2',
 });
 
-const getSerialNumber = async (aggregateId: string): Promise<number> => {
-  const items = await ddb.query({
-    TableName: 'domain',
-    AttributesToGet: ['id'],
-    KeyConditions: {
-      'id': {
-        AttributeValueList: [
-          { S: aggregateId }
-        ],
-        ComparisonOperator: 'EQ',
-      }
-    },
-    ScanIndexForward: false,
-    Limit: 1,
-  }).promise();
-  console.log(items);
-  return 1;
-};
-
 const createCommandTable = async (tableName: string) => {
   await ddb.createTable({
     TableName: tableName,
@@ -58,6 +39,23 @@ const createDomainTable = async (tableName: string) => {
   }).promise();
 }
 
+const createReadTable = async (tableName: string) => {
+  await ddb.createTable({
+    TableName: tableName,
+    AttributeDefinitions: [
+      { AttributeName: 'accountId', AttributeType: 'S' },
+      { AttributeName: 'amount', AttributeType: 'S' },
+    ],
+    ProvisionedThroughput: {
+      ReadCapacityUnits: 5,
+      WriteCapacityUnits: 5,
+    },
+    KeySchema: [
+      { AttributeName: 'accountId', KeyType: 'HASH' },
+    ],
+  }).promise();
+}
+
 const scan = async (tableName: string): Promise<any> => {
   const resp = await ddb.scan({
     TableName: tableName,
@@ -65,15 +63,18 @@ const scan = async (tableName: string): Promise<any> => {
   return JSON.stringify(resp.Items);
 }
 
-const run = async (id: string) => {
-  // const commandTableName = 'command';
-  // await createCommandTable(commandTableName);
-  // const domainTableName = 'domain';
-  // await createDomainTable(domainTableName);
-  // const serialNumber = await getSerialNumber(id);
-  // console.log(serialNumber);
-  console.log(await scan('domain'));
-  // console.log(await scan('command'));
+const run = async () => {
+  const commandTableName = 'command';
+  await createCommandTable(commandTableName);
+  console.log('domain scan: ', await scan(commandTableName));
+
+  const domainTableName = 'domain';
+  await createDomainTable(domainTableName);
+  console.log('command scan: ', await scan(domainTableName));
+
+  const readTableName = 'read';
+  await createReadTable(readTableName);
+  console.log('read scan: ', await scan(readTableName));
 }
 
-run('1').catch(console.error);
+run().catch(console.error);
