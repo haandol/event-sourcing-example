@@ -9,7 +9,6 @@ const kafka = new Kafka({
 
 const topic = 'account';
 const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: 'app' })
 
 const createMessage = (event: Command.CommandEvent) => ({
   key: event.id,
