@@ -7,8 +7,9 @@ const kafka = new Kafka({
   brokers: ['localhost:9092'],
 });
 
-const topic = 'account1';
+const topic = 'account';
 const producer = kafka.producer();
+const consumer = kafka.consumer({ groupId: 'app' })
 
 const createMessage = (event: Command.CommandEvent) => ({
   key: event.id,

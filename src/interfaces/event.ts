@@ -24,6 +24,32 @@ export const getLaestSerialNumber = async (aggregateId: string): Promise<number>
   return (items.Items!.length === 1) ? parseInt(items.Items![0].serialNumber.S!) : 0;
 };
 
+export const rehydrate = (items: AWS.DynamoDB.ItemList) => {
+  let currentState = undefined;
+  for (const item of items) {
+    const event = Domain.DomainEvent.fromDict({
+      aggregateId: item.aggregateId.S!,
+      serialNumber: item.serialNumber.S!,
+      type: item.eventType.S!,
+      data: JSON.parse(item.data.S!),
+    });
+    console.log('[Rehydrate]: ', event);
+    if (!currentState) {
+      currentState = new Account(event);
+      continue;
+    }
+
+    if (event.type === 'MoneyDeposited') {
+      currentState.deposit(event);
+    } else if (event.type === 'MoneyWithdrawn') {
+      currentState.withdrawn(event);
+    } else {
+      console.error(event.toJSON());
+    }
+  }
+  return currentState;
+};
+
 export namespace Command {
   export class CommandEvent {
     public id: string;

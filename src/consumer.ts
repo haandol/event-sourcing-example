@@ -1,6 +1,6 @@
 import AWS from 'aws-sdk';
 import { Kafka, CompressionTypes } from 'kafkajs';
-import { Command, Domain, Account, getLaestSerialNumber } from './interfaces/event';
+import { Command, Domain, rehydrate, getLaestSerialNumber } from './interfaces/event';
 
 const kafka = new Kafka({
   clientId: 'consumer',
@@ -12,35 +12,9 @@ const ddb = new AWS.DynamoDB({
   region: 'ap-northeast-2',
 });
 
-const topic = 'account1';
-const consumer = kafka.consumer({ groupId: 'test-group' })
+const topic = 'account';
+const consumer = kafka.consumer({ groupId: 'consumer' })
 const producer = kafka.producer();
-
-const rehydrate = (items: AWS.DynamoDB.ItemList) => {
-  let currentState = undefined;
-  for (const item of items) {
-    const event = Domain.DomainEvent.fromDict({
-      aggregateId: item.aggregateId.S!,
-      serialNumber: item.serialNumber.S!,
-      type: item.eventType.S!,
-      data: JSON.parse(item.data.S!),
-    });
-    console.log('[Rehydrate]: ', event);
-    if (!currentState) {
-      currentState = new Account(event);
-      continue;
-    }
-
-    if (event.type === 'MoneyDeposited') {
-      currentState.deposit(event);
-    } else if (event.type === 'MoneyWithdrawn') {
-      currentState.withdrawn(event);
-    } else {
-      console.error(event.toJSON());
-    }
-  }
-  return currentState;
-};
 
 const createMessage = (event: Domain.DomainEvent) => ({
   key: event.aggregateId,
